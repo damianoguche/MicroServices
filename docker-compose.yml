@@ -1,0 +1,67 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  user-mongo:
+    image: mongo:5
+    container_name: user-mongo
+    ports:
+      - "27071:27017"
+    volumes:
+      - user_mongo_data:/data/db
+
+  task-mongo:
+    image: mongo:5
+    container_name: task-mongo
+    ports:
+      - "27072:27017"
+    volumes:
+      - task_mongo_data:/data/db
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    ports:
+      - "3001:3001"
+    depends_on:
+      user-mongo:
+        condition: service_started
+    env_file:
+      - ./user-service/.env
+
+  task-service:
+    build: ./task-service
+    container_name: task-service
+    ports:
+      - "3002:3002"
+    depends_on:
+      task-mongo:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - ./task-service/.env
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "3003:3003"
+    depends_on:
+      task-mongo:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  user_mongo_data:
+  task_mongo_data:
