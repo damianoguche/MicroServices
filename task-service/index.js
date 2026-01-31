@@ -99,7 +99,7 @@ app.post("/tasks", auth, async (req, res) => {
 
     await task.save();
 
-    const message = {
+    const taskEvent = {
       taskId: task._id,
       userId,
       title
@@ -110,7 +110,7 @@ app.post("/tasks", auth, async (req, res) => {
 
     channel.sendToQueue(
       TASK_CREATED_QUEUE,
-      Buffer.from(JSON.stringify(message)),
+      Buffer.from(JSON.stringify(taskEvent)),
       {
         persistent: true
       }
