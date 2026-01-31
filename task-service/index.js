@@ -57,15 +57,16 @@ const TaskSchema = new mongoose.Schema(
 const Task = mongoose.model("Task", TaskSchema);
 
 let connection, channel;
-const queue = "task_created";
+const TASK_CREATED_QUEUE = "task_created";
 
 async function connectRabbitMQWithRetry(retries = 5, delay = 3000) {
   while (retries) {
     try {
       connection = await amqp.connect("amqp://rabbitmq");
       channel = await connection.createChannel();
-      await channel.assertQueue(queue, { durable: true });
+      await channel.assertQueue(TASK_CREATED_QUEUE, { durable: true });
       console.log("Connected to RabbitMQ");
+
       return;
     } catch (err) {
       console.error("RabbitMQ connection error: ", err.message);
@@ -107,9 +108,13 @@ app.post("/tasks", auth, async (req, res) => {
     if (!channel)
       return res.status(503).json({ error: "RabbitMQ not connected" });
 
-    channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), {
-      persistent: true
-    });
+    channel.sendToQueue(
+      TASK_CREATED_QUEUE,
+      Buffer.from(JSON.stringify(message)),
+      {
+        persistent: true
+      }
+    );
 
     logger.info("Task Created", { taskId: task._id, userId });
 
